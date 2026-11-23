@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import CORS_ORIGINS
+from app.config import APP_VERSION, CORS_ORIGINS
 from app.crypto import load_keys
 from app.db import pool, run_migrations
 from app.routers import auth, users
@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     pool.close()
 
 
-app = FastAPI(title="Sample Users API", lifespan=lifespan)
+app = FastAPI(title="Sample Users API", version=APP_VERSION, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,4 +34,4 @@ app.include_router(users.router)
 
 @app.get("/health", tags=["meta"])
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}

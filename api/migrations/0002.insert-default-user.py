@@ -34,8 +34,16 @@ def apply(conn):
                               card_last4, email, password, salt)
            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
            ON CONFLICT (email) DO NOTHING""",
-        ("Admin", "User", card_encrypted, key_version, CARD[-4:],
-         EMAIL, hash_password(PASSWORD, salt), salt),
+        (
+            "Admin",
+            "User",
+            card_encrypted,
+            key_version,
+            CARD[-4:],
+            EMAIL,
+            hash_password(PASSWORD, salt),
+            salt,
+        ),
     )
 
 

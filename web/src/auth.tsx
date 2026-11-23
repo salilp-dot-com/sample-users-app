@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { api, setAuthToken, setUnauthorizedHandler } from './api'
 import { AUTH_MODE } from './config'
+import { sessionFromToken } from './token'
 import { AuthContext, useAuth } from './useAuth'
 import type { Session } from './useAuth'
 
@@ -20,22 +21,7 @@ import type { Session } from './useAuth'
 
 const STORAGE_KEY = 'token'
 
-type Claims = { sub: string; email: string; exp: number }
 type AuthState = { ready: boolean; session: Session | null }
-
-// localStorage mode: read the JWT payload. No signature check needed here, the API
-// verifies every request. (Note that any script on the page could do the same.)
-function sessionFromToken(token: string): Session | null {
-  try {
-    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    const claims = JSON.parse(atob(payload)) as Claims
-    const expiresAt = claims.exp * 1000
-    if (expiresAt <= Date.now()) return null
-    return { userId: Number(claims.sub), email: claims.email, expiresAt }
-  } catch {
-    return null
-  }
-}
 
 function readStoredToken(): string | null {
   try {

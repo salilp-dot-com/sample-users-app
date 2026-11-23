@@ -58,7 +58,7 @@ const AUTH_PATHS = ['/login', '/login?cookie=true', '/me', '/logout']
 type ValidationIssue = { loc: (string | number)[]; msg: string }
 
 // FastAPI errors are either {"detail": "text"} or {"detail": [{loc, msg}, ...]}.
-function errorMessage(body: unknown, fallback: string): string {
+export function errorMessage(body: unknown, fallback: string): string {
   const detail = (body as { detail?: unknown } | null)?.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {

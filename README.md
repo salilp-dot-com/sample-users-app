@@ -6,8 +6,16 @@ A users app with a FastAPI and PostgreSQL REST API and a React frontend. It supp
 .
 ├── docker-compose.yml   # PostgreSQL + pgAdmin for local development
 ├── api/                 # FastAPI REST API (Python, managed with uv)
-└── web/                 # React + Vite + TypeScript frontend
+├── web/                 # React + Vite + TypeScript frontend
+├── deploy/              # VM install scripts, systemd unit, nginx config
+├── scripts/             # package.sh (build release tarballs), setup-github.sh
+└── .github/workflows/   # CI, packaging and release automation
 ```
+
+[![CI](https://github.com/salilp-dot-com/sample-users-app/actions/workflows/ci.yml/badge.svg)](https://github.com/salilp-dot-com/sample-users-app/actions/workflows/ci.yml)
+
+- **Contributing, branching and releases:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Deploying to a VM:** [deploy/README.md](deploy/README.md)
 
 ## Prerequisites
 
@@ -76,7 +84,7 @@ Open <http://localhost:5173> and log in with the default user: the `DEFAULT_USER
 
 The frontend calls the API at `http://localhost:8000` by default. To point it somewhere else, create `web/.env.local` containing, for example, `VITE_API_URL=http://localhost:8001`, and restart `npm run dev`. If you change the frontend's own port, add the new address to the API's `CORS_ORIGINS`.
 
-Other scripts: `npm run build` (type-check and production build into `web/dist/`) and `npm run lint`.
+Other scripts: `npm run build` (type-check and production build into `web/dist/`), `npm run lint`, `npm run typecheck` and `npm test`.
 
 ## Where the login token is kept: localStorage or cookie
 
@@ -189,7 +197,18 @@ docker compose exec postgres psql -U postgres \
   -c "DROP DATABASE users_db WITH (FORCE)" -c "CREATE DATABASE users_db"
 ```
 
-To change the schema, add a new migration file such as `api/migrations/0002.add-something.sql` and restart the API. Never edit a migration that has already been applied.
+To change the schema, add a new migration file such as `api/migrations/0003.add-something.sql` and restart the API. Never edit a migration that has already been applied.
+
+## Tests and CI
+
+```sh
+cd api && uv run pytest          # API: needs the docker compose Postgres (uses its own users_test DB)
+cd web && npm test               # Web: Vitest + React Testing Library
+```
+
+GitHub Actions lints, tests and builds both apps on every pull request and every push to
+`main`, and builds the deployable packages. Merging the release PR tags a semantic
+version and attaches the packages to a GitHub Release. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Troubleshooting
 

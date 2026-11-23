@@ -45,9 +45,7 @@ def list_users(conn=Depends(get_conn), _: int = Depends(current_user_id)):
 
 @router.get("/{user_id}", response_model=UserOut)
 def get_user(user_id: int, conn=Depends(get_conn), _: int = Depends(current_user_id)):
-    row = conn.execute(
-        f"SELECT {COLUMNS} FROM users WHERE id = %s", (user_id,)
-    ).fetchone()
+    row = conn.execute(f"SELECT {COLUMNS} FROM users WHERE id = %s", (user_id,)).fetchone()
     if row is None:
         raise _not_found(user_id)
     return UserOut.from_row(row)
@@ -69,7 +67,7 @@ def create_user(body: UserCreate, conn=Depends(get_conn)):
             data,
         ).fetchone()
     except psycopg.errors.UniqueViolation:
-        raise _email_taken()
+        raise _email_taken() from None
     return UserOut.from_row(row)
 
 
@@ -85,7 +83,7 @@ def _update(conn, user_id: int, data: dict) -> UserOut:
     try:
         row = conn.execute(query, {**data, "_id": user_id}).fetchone()
     except psycopg.errors.UniqueViolation:
-        raise _email_taken()
+        raise _email_taken() from None
     if row is None:
         raise _not_found(user_id)
     return UserOut.from_row(row)

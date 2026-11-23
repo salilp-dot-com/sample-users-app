@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
@@ -34,7 +34,7 @@ def verify_password(password: str, salt: str, expected_hash: str) -> bool:
 
 
 def create_access_token(user_id: int, email: str) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "email": email,
@@ -84,7 +84,7 @@ def current_claims(
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
-        raise _unauthorized("Invalid or expired token")
+        raise _unauthorized("Invalid or expired token") from None
 
 
 def current_user_id(claims: dict = Depends(current_claims)) -> int:

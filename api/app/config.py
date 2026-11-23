@@ -1,9 +1,14 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Load api/.env for local development. Real environment variables win.
 load_dotenv()
+
+# Release version: written to api/VERSION by the CI package build ("dev" when run from source).
+_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
+APP_VERSION = _VERSION_FILE.read_text().strip() if _VERSION_FILE.exists() else "dev"
 
 # Defaults match ../docker-compose.yml so the app works out of the box locally.
 DATABASE_URL = os.getenv(

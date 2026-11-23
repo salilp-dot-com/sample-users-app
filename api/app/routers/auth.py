@@ -43,12 +43,18 @@ def login(
             path="/",
         )
         return TokenResponse(
-            access_token=None, token_type="cookie", expires_in=expires_in,
-            user_id=row["id"], email=row["email"],
+            access_token=None,
+            token_type="cookie",
+            expires_in=expires_in,
+            user_id=row["id"],
+            email=row["email"],
         )
     return TokenResponse(
-        access_token=token, token_type="bearer", expires_in=expires_in,
-        user_id=row["id"], email=row["email"],
+        access_token=token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user_id=row["id"],
+        email=row["email"],
     )
 
 

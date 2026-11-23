@@ -1,0 +1,66 @@
+# Semantic-version releases with release-please (https://github.com/googleapis/release-please).
+#
+# On every push to main, release-please reads the Conventional Commit messages since the
+# last release and keeps a "release PR" open that bumps version.txt and CHANGELOG.md:
+#   fix: ...            -> patch  (0.1.0 -> 0.1.1)
+#   feat: ...           -> minor  (0.1.0 -> 0.2.0)
+#   feat!: ... / BREAKING CHANGE: in the body -> major (1.x -> 2.0.0; minor while < 1.0)
+# Merging that PR makes release-please tag vX.Y.Z and create a GitHub Release; this
+# workflow then builds the packages for that version and attaches them to the release.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Never run two releases at once; queue instead of cancelling.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # create tags, releases, upload assets
+  pull-requests: write # open/update the release PR
+
+jobs:
+  release-please:
+    name: Release PR / tag
+    runs-on: ubuntu-24.04
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # PRs opened with the default GITHUB_TOKEN don't trigger CI, so the release PR's
+          # required checks would never run. A token in this secret fixes that (see
+          # CONTRIBUTING.md); without it, the default token is used.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+  package:
+    name: Package
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/package.yml
+    with:
+      version: ${{ needs.release-please.outputs.version }}
+
+  publish:
+    name: Attach packages to release
+    needs: [release-please, package]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: dist
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber

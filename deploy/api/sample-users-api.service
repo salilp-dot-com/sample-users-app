@@ -1,0 +1,29 @@
+[Unit]
+Description=Sample Users API (FastAPI)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=sample-users-api
+Group=sample-users-api
+# "current" is a symlink to the active release, so a deploy or rollback is just
+# re-pointing the symlink and restarting.
+WorkingDirectory=/opt/sample-users-api/current
+EnvironmentFile=/etc/sample-users-api/api.env
+# nginx proxies /api/ to this port and strips the prefix; --root-path keeps /api/docs working.
+# Migrations run at startup (yoyo takes a lock, so several workers are safe).
+ExecStart=/opt/sample-users-api/current/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --workers 2 \
+    --root-path /api --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=3
+
+# Hardening: the app only needs to read its code and talk to the network.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target

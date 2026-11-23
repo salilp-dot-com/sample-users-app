@@ -52,9 +52,9 @@ def _decrypt_with_kms(encrypted_keys: dict[int, bytes]) -> dict[int, bytes]:
     kms = kms_client()
     extra = {"KeyId": CARD_KMS_KEY_ID} if CARD_KMS_KEY_ID else {}
     return {
-        version: kms.decrypt(
-            CiphertextBlob=blob, EncryptionContext=KMS_CONTEXT, **extra
-        )["Plaintext"]
+        version: kms.decrypt(CiphertextBlob=blob, EncryptionContext=KMS_CONTEXT, **extra)[
+            "Plaintext"
+        ]
         for version, blob in encrypted_keys.items()
     }
 

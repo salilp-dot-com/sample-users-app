@@ -1,0 +1,65 @@
+# Reusable workflow: build the deployable API + web tarballs (scripts/package.sh).
+# Called by ci.yml (every PR / push, dev version) and release.yml (tagged releases).
+name: Package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to stamp into the packages. Empty = 0.0.0-dev.<run>+<sha>.
+        type: string
+        default: ""
+    outputs:
+      version:
+        description: The version that was built
+        value: ${{ jobs.build.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build packages
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: api/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Decide version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }} # via env, never inlined into the script
+        run: |
+          version="${INPUT_VERSION:-0.0.0-dev.${GITHUB_RUN_NUMBER}+${GITHUB_SHA::7}}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $version"
+
+      - name: Build packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          # Optional repository variable (Settings → Variables): localStorage or cookie
+          VITE_AUTH_MODE: ${{ vars.VITE_AUTH_MODE || 'localStorage' }}
+        run: scripts/package.sh "$VERSION" dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

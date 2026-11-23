@@ -1,0 +1,94 @@
+# Lint, test and build both apps on every pull request and every push to main,
+# then build the deployable packages (downloadable from the run's "Artifacts").
+#
+# The "API", "Web" and "Package / Build packages" job names are required status checks
+# on main (see scripts/setup-github.sh), so a PR can't merge unless they pass.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same PR cancels the older run; runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # tests/conftest.py creates and drops its own users_test database on this server
+      TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked # fails if uv.lock is out of date with pyproject.toml
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Check formatting
+        run: uv run ruff format --check --diff .
+
+      - name: Test
+        run: uv run pytest -v
+
+  web:
+    name: Web
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci # fails if package-lock.json is out of date
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  package:
+    name: Package
+    needs: [api, web]
+    uses: ./.github/workflows/package.yml

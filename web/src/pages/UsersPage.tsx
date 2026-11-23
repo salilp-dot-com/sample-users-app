@@ -4,20 +4,10 @@ import type { User, UserInput } from '../api'
 import { useAuth } from '../useAuth'
 import AuthModeBadge from '../components/AuthModeBadge'
 import UserForm from '../components/UserForm'
+import { changedFields } from '../userChanges'
 
 // Which form is open: none, "new user", or editing a specific user.
 type Editor = { kind: 'closed' } | { kind: 'create' } | { kind: 'edit'; user: User }
-
-// For PATCH: send only fields that changed; blank card/password mean "keep".
-function changedFields(user: User, values: UserInput): Partial<UserInput> {
-  const changes: Partial<UserInput> = {}
-  if (values.first_name !== user.first_name) changes.first_name = values.first_name
-  if (values.last_name !== user.last_name) changes.last_name = values.last_name
-  if (values.email !== user.email) changes.email = values.email
-  if (values.credit_card_number) changes.credit_card_number = values.credit_card_number
-  if (values.password) changes.password = values.password
-  return changes
-}
 
 export default function UsersPage() {
   const { session, logout } = useAuth()
